@@ -4,6 +4,8 @@ pipeline {
     environment {
         VERSION = "${BUILD_NUMBER}"
         ARTIFACT_NAME = "library-app-${VERSION}.tar.gz"
+        SONAR_PROJECT_KEY = "YOUR_PROJECT_KEY"
+        SONAR_ORG = "YOUR_ORG_KEY"
     }
     
     stages {
@@ -18,25 +20,34 @@ pipeline {
             steps {
                 echo "Building application version ${VERSION}"
                 sh '''
-                    echo "Building application..."
                     mkdir -p build
-                    cp *.py build/ 2>/dev/null || echo "Python files copied"
-                    cp *.sql build/ 2>/dev/null || echo "SQL files copied"
+                    cp *.py build/ 2>/dev/null || true
+                    cp *.sql build/ 2>/dev/null || true
                     echo "Build ${VERSION}" > build/version.txt
-                    echo "Build completed successfully"
                 '''
             }
         }
         
-        stage('Test') {
+        stage('SonarQube Analysis') {
             steps {
-                echo "Running tests"
-                sh '''
-                    echo "Test results:" > test-results.txt
-                    echo "Tests passed: 10" >> test-results.txt
-                    echo "Tests failed: 0" >> test-results.txt
-                    echo "Coverage: 85%" >> test-results.txt
-                '''
+                script {
+                    def scannerHome = tool 'SonarScanner'
+                    withSonarQubeEnv('SonarCloud') {
+                        sh """
+                            ${scannerHome}/bin/sonar-scanner \
+                            -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                            -Dsonar.organization=${SONAR_ORG}
+                        """
+                    }
+                }
+            }
+        }
+        
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
             }
         }
         
@@ -45,42 +56,32 @@ pipeline {
                 echo "Creating build artifacts"
                 sh '''
                     tar -czf ${ARTIFACT_NAME} build/
-                    echo "Artifact created: ${ARTIFACT_NAME}"
-                    ls -lh ${ARTIFACT_NAME}
                 '''
             }
         }
         
         stage('Archive Artifacts') {
             steps {
-                echo "Archiving artifacts for build ${VERSION}"
-                archiveArtifacts artifacts: '*.tar.gz, test-results.txt', 
-                                 fingerprint: true,
-                                 allowEmptyArchive: false
+                archiveArtifacts artifacts: '*.tar.gz', fingerprint: true
             }
         }
         
-        stage('Deploy - Main Branch Only') {
+        stage('Deploy - Main Only') {
             when {
                 branch 'main'
             }
             steps {
-                echo "Deploying version ${VERSION} to production"
-                sh '''
-                    echo "Deploying ${ARTIFACT_NAME}"
-                    echo "Deployment successful"
-                '''
+                echo "Deploying version ${VERSION}"
             }
         }
     }
     
     post {
         success {
-            echo "Build ${VERSION} completed successfully"
-            echo "Artifacts archived and ready for deployment"
+            echo "Build ${VERSION} passed quality gate"
         }
         failure {
-            echo "Build ${VERSION} failed"
+            echo "Build ${VERSION} failed quality gate"
         }
     }
 }
