@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  jenkins-agent-testing:
+    image: jenkins/inbound-agent:latest
+    container_name: jenkins-agent-testing
+    environment:
+      - JENKINS_URL=http://jenkins:8080
+      - JENKINS_SECRET=877af529cf68bb841518e83e1307d15211b96f145663d7325de56ae5ee72eb1a
+      - JENKINS_AGENT_NAME=agent-testing
+      - JENKINS_AGENT_WORKDIR=/home/jenkins/agent
+    volumes:
+      - jenkins-agent-testing-data:/home/jenkins/agent
+    networks:
+      - jenkins-network
+    restart: unless-stopped
+
+  jenkins-agent-deployment:
+    image: jenkins/inbound-agent:latest
+    container_name: jenkins-agent-deployment
+    environment:
+      - JENKINS_URL=http://jenkins:8080
+      - JENKINS_SECRET=d24dd9ccfbdeee5c88b387a9c35b14afc3f81aca09ae7bf12f67b135207a9241
+      - JENKINS_AGENT_NAME=agent-deployment
+      - JENKINS_AGENT_WORKDIR=/home/jenkins/agent
+    volumes:
+      - jenkins-agent-deployment-data:/home/jenkins/agent
+    networks:
+      - jenkins-network
+    restart: unless-stopped
+
+volumes:
+  jenkins-agent-testing-data:
+  jenkins-agent-deployment-data:
+
+networks:
+  jenkins-network:
+    external: true

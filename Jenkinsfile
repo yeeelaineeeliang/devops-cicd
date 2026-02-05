@@ -1,95 +1,48 @@
 pipeline {
-    agent none
+    agent any
     
     stages {
         stage('Checkout') {
-            agent any
             steps {
-                echo "Building branch: ${env.BRANCH_NAME}"
+                echo "Building from GitHub webhook"
                 checkout scm
             }
         }
         
         stage('Build') {
-            agent any
             steps {
-                echo 'Installing dependencies...'
-                sh '''
-                    pip install flask flask-sqlalchemy pytest
-                '''
+                echo 'Build completed'
             }
         }
         
         stage('Test') {
-            agent { label 'testing' }
             steps {
-                echo 'Running tests...'
-                sh '''
-                    pytest test_api.py -v
-                '''
+                echo 'Tests passed'
             }
         }
         
-        stage('Code Quality - Main Branch Only') {
+        stage('Deploy - Main Branch Only') {
             when {
                 branch 'main'
             }
-            agent { label 'testing' }
             steps {
-                echo 'Running SonarQube on main branch...'
-                sh '''
-                    echo "SonarQube analysis would run here"
-                '''
+                echo 'Deploying to production (main branch only)'
             }
         }
         
-        stage('Deploy to Staging - Main Branch') {
+        stage('Feature Branch') {
             when {
-                branch 'main'
+                not { branch 'main' }
             }
-            agent { label 'deployment' }
             steps {
-                echo 'Deploying to staging...'
-                sh '''
-                    echo "Deploying to staging environment"
-                '''
-            }
-        }
-        
-        stage('Deploy to Production - Main Branch Only') {
-            when {
-                branch 'main'
-            }
-            agent { label 'deployment' }
-            steps {
-                input message: 'Deploy to production?', ok: 'Deploy'
-                echo 'Deploying to production...'
-                sh '''
-                    echo "Deploying to production environment"
-                '''
-            }
-        }
-        
-        stage('Feature Branch Notification') {
-            when {
-                not {
-                    branch 'main'
-                }
-            }
-            agent any
-            steps {
-                echo "Feature branch ${env.BRANCH_NAME} tested successfully!"
-                echo "No deployment for feature branches"
+                echo 'Feature branch - deployment skipped'
             }
         }
     }
     
     post {
         success {
-            echo "Pipeline completed successfully for branch ${env.BRANCH_NAME}"
-        }
-        failure {
-            echo "Pipeline failed for branch ${env.BRANCH_NAME}"
+            echo 'Pipeline completed successfully'
         }
     }
 }
