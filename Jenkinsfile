@@ -4,8 +4,8 @@ pipeline {
     environment {
         VERSION = "${BUILD_NUMBER}"
         ARTIFACT_NAME = "library-app-${VERSION}.tar.gz"
-        SONAR_PROJECT_KEY = "YOUR_PROJECT_KEY"
-        SONAR_ORG = "YOUR_ORG_KEY"
+        SONAR_PROJECT_KEY = "yeeelaineeeliang_devops"
+        SONAR_ORG = "yeeelaineeeliang"
     }
     
     stages {
